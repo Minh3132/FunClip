@@ -48,13 +48,18 @@ def proc(raw_text, timestamp, dest_text, lang='zh'):
 
     ts = []
     match_len = len(dest_tokens)
-    for start in range(0, len(raw_tokens) - match_len + 1):
+    start = 0
+    last_start = len(raw_tokens) - match_len
+    while start <= last_start:
         end = start + match_len
-        if raw_tokens[start:end] != dest_tokens:
-            continue
-        if end > len(timestamp):
-            continue
-        ts.append([timestamp[start][0] * 16, timestamp[end - 1][1] * 16])
+        if raw_tokens[start:end] == dest_tokens and end <= len(timestamp):
+            ts.append([timestamp[start][0] * 16, timestamp[end - 1][1] * 16])
+            # Preserve the previous string-search policy: after a successful
+            # match, continue after the whole matched range so repeated output
+            # does not duplicate overlapping source audio.
+            start = end
+        else:
+            start += 1
     return ts
             
 def proc_spk(dest_spk, sd_sentences):
@@ -98,7 +103,7 @@ def load_state(output_dir):
     if os.path.exists(output_dir+'/sd_sentences'):
         with open(output_dir+'/sd_sentences') as fin:
             line = fin.read()
-            state['sd_sentences'] = eval(line)
+        state['sd_sentences'] = eval(line)
     return state
 
 def convert_pcm_to_float(data):
